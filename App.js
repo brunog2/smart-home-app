@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, FlatList } from 'react-native';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import AppLoading from 'expo-app-loading';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts, Lato_700Bold, Lato_400Regular, Lato_300Light } from '@expo-google-fonts/lato';
+import * as SVG from 'react-native-svg';
+
+const { Svg, Path, G, Rect} = SVG
+
 export default function App() {
   const [sensores, setSensores] = useState([
       {
@@ -44,14 +47,44 @@ export default function App() {
     console.log(sensores)
   }, [sensores])
 
-  const handleSuperButtonPress = () => {
-    var newSensores = [...sensores];
-
+  const controlAll = (action) => {
+    var newSensores = [...sensores]
+    
     for (var sensor in newSensores) {
-      newSensores[sensor].sit = 0;
+      newSensores[sensor].sit = action;
     };
 
     setSensores(newSensores);
+
+    return;
+  }
+
+  const handleSuperButtonPress = () => {
+    var newSensores = [...sensores];
+
+    let on = 0, off = 0;
+
+    for (var sensor in newSensores) {
+      newSensores[sensor].sit == 1 ? on++ : off++;
+    };
+
+    console.log("ligados", on, " desligados", off);
+
+    {/* se um ou mais estiverem ligados, ligar todos */}
+    if (on >= 0 && on < newSensores.length) {
+      return controlAll(1);
+    } 
+
+    {/* se todos estiverem ligados, desligar ligar todos */}
+    if (on == newSensores.length) {
+      return controlAll(0);
+    }
+
+    {/* se todos estiverem desligados, ligar todos */}
+    if (off == newSensores.length) {
+      return controlAll(1);
+    }
+
   };
 
   const handleSwitchPress = (id) => {
@@ -77,25 +110,47 @@ export default function App() {
   else {
       return (
       <View style={styles.mainContainer}>      
-        <StatusBar style="light" />
-        <View style={[styles.container, styles.topContainer]}>
-          <Text style={styles.title}>Smart Home</Text>
-        
-          <View style={styles.infoContainer}>
-            <Ionicons name="partly-sunny" size={28} color="white" />
+        <StatusBar style="light" backgroundColor="#661ddb"/>
+        <View style={[styles.container, {flex: 0.4}]}>
 
-            <Text style={styles.temperature}>
-              29 °<Text style={{fontSize: 14, fontFamily: "Lato_400Regular"}}>C</Text>
-            </Text>
+        <View style={styles.svgCurve}>
+          <View style={{ backgroundColor: '#661ddb', flex: 1 }}>
+            <Svg
+              height="60%"
+              width="100%"
+              viewBox="0 0 1440 320"
+              style={{ position: 'absolute', top: 150 }}
+            >
+              <Path
+                fill="#661ddb"
+                d="M0,160L48,160C96,160,192,160,288,181.3C384,203,480,245,576,250.7C672,256,768,224,864,181.3C960,139,1056,85,1152,69.3C1248,53,1344,75,1392,85.3L1440,96L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"
+              />
+            </Svg>
+            
+            <View>
+              <View style={styles.topContainer}>
+                <Text style={styles.title}>Smart Home</Text>
+            
+                <View style={styles.infoContainer}>
+                  <Ionicons name="partly-sunny" size={28} color="white" />
 
-            <Text style={styles.date}>Domingo, 21 de março</Text>
-          </View>
+                  <Text style={styles.temperature}>
+                    29 °<Text style={{fontSize: 14, fontFamily: "Lato_400Regular"}}>C</Text>
+                  </Text>
 
-          <TouchableOpacity style={styles.shutdownAllContainer}>
-            <View style={styles.shutdownAll}>
-              <Ionicons name="power-outline" size={34} color="#e62727" />
+                  <Text style={styles.date}>Domingo, 21 de março</Text>
+                </View>
+
+                <TouchableOpacity style={styles.shutdownAllContainer} onPress={() => handleSuperButtonPress()}>
+                  <View style={styles.shutdownAll}>
+                    <Ionicons name="power-outline" size={34} color="#e62727" />
+                  </View>
+                </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+            </View>
+
+          </View>
+      </View>
 
         </View>
 
@@ -147,6 +202,10 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  svgCurve: {
+    position: 'absolute',
+    width: Dimensions.get('window').width
+  },
   mainContainer: {
     flex: 1,
     backgroundColor: '#fff',
@@ -160,11 +219,11 @@ const styles = StyleSheet.create({
   },
   topContainer: {
     flex: 0.4,
+    marginTop: 10,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-evenly',
     borderBottomStartRadius: 30,
     borderBottomEndRadius: 30,
-    backgroundColor: "#5200ba"
   },
   title: {
     fontSize: 26,
