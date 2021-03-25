@@ -4,23 +4,26 @@ import AppLoading from 'expo-app-loading';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts, Lato_700Bold, Lato_400Regular, Lato_300Light } from '@expo-google-fonts/lato';
 import * as SVG from 'react-native-svg';
+import axios from 'axios';
+
+const cheerio = require('cheerio-without-node-native')
 
 const { Svg, Path, G, Rect} = SVG
 
 export default function App() {
   const [sensores, setSensores] = useState([
       {
-        'id': 'sala',
+        'id': 1,
         'name': 'Luz da sala',
         'sit': 0,
         },
         {
-          'id': 'piscina',
+          'id': 2,
           'name': 'Luz da piscina',
           'sit': 0,
         },
         {
-          'id': 'alarme',
+          'id': 3,
           'name': 'Alarme',
           'sit': 0,
         }
@@ -44,14 +47,71 @@ export default function App() {
   });
 
   useEffect(() => {
+
+
+    const setSensorsSit = async () => {
+      let nameSensores = ['Luz da sala', 'Luz da piscina', 'Alarme'];
+      let newSensores = [];
+
+      console.log(newSensores)
+      
+      for (var i = 1; i <= 3; i++) {
+        const urlSensor = `https://iot924.000webhostapp.com/sensor${i}.php`;
+        const urlSensorResponse = await fetch(urlSensor);  // fetch page 
+      
+        const htmlStringSensor = await urlSensorResponse.text(); // get response text
+        const $ = cheerio.load(htmlStringSensor);       // parse HTML string
+      
+  
+        const result = $("#s-results-list-atf > body")["_root"]["0"]["children"][0]["data"]
+
+        let sit = parseInt(result);
+
+        console.log("result, sit: ", result, sit);
+
+        
+
+        let sensor = {
+          "id": i,
+          "name": nameSensores[i-1],
+          "sit": sit
+        }
+
+        newSensores.push(sensor);
+      }
+
+      setSensores(newSensores)
+
+
+
+      console.log(newSensores, typeof(result))
+    }
+    
+    setSensorsSit();
+  }, [])
+
+  useEffect(() => {
     console.log(sensores)
   }, [sensores])
 
-  const controlAll = (action) => {
+  const controlAll = async (action) => {
     var newSensores = [...sensores]
     
     for (var sensor in newSensores) {
-      newSensores[sensor].sit = action;
+      let codSensor = parseInt(sensor)+1;
+      let sitSensor = action;
+
+      let url = 'https://iot924.000webhostapp.com/atualiza.php';
+      
+      await axios.get(url, {
+        params: {
+          codigoSensor: codSensor.toString(),
+          situacaoSensor: sitSensor == 0 ? 'off' : 'on'
+        }
+      }).then(() => {
+        newSensores[sensor].sit = action;
+      })
+      
     };
 
     setSensores(newSensores);
@@ -87,15 +147,27 @@ export default function App() {
 
   };
 
-  const handleSwitchPress = (id) => {
+  const handleSwitchPress = async (id) => {
     var newSensores = [...sensores];
 
     console.log(newSensores, id);
 
     for (var sensor in newSensores) {
       console.log(sensor, newSensores[sensor].id)
-      if (newSensores[sensor].id == id)
+      if (newSensores[sensor].id == id) {
         newSensores[sensor].sit = newSensores[sensor].sit == 0 ? 1 : 0;
+        
+        let url = 'https://iot924.000webhostapp.com/atualiza.php';
+      
+        await axios.get(url, {
+          params: {
+            codigoSensor: id.toString(),
+            situacaoSensor: newSensores[sensor].sit == 0 ? 'off' : 'on'
+          }
+        }).then(() => {
+          setSensores(newSensores);
+        })
+      };
     }    
 
     console.log(newSensores);
