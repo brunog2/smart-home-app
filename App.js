@@ -10,6 +10,9 @@ const cheerio = require('cheerio-without-node-native')
 
 const { Svg, Path, G, Rect} = SVG
 
+const months = { 1: 'janeiro', 2: 'fevereiro', 3: 'março', 4: 'abril', 5: 'maio', 6: 'junho', 7: 'julho', 8: 'agosto', 9: 'setembro', 10: 'outubro', 11: 'novembro', 12: 'dezembro' }
+const days = { 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sabado', 7: 'Domingo' }
+
 export default function App() {
   const [sensores, setSensores] = useState([
       {
@@ -28,7 +31,16 @@ export default function App() {
           'sit': 0,
         }
     ]);
+
+    const [actualDate, setActualDate] = useState({
+      'day': '1',
+      'date': '21',
+      'month': '3',
+      'hours': '16'
+    });
     
+    const [actualTemp, setActualTemp] = useState(29);
+
   const colors = {
     'icon': { 'disabled': '#7b6492', 'enabled': '#f5c242' },
     'switchIcon': { 'disabled': '#756788', 'enabled': '#fff' },
@@ -47,8 +59,6 @@ export default function App() {
   });
 
   useEffect(() => {
-
-
     const setSensorsSit = async () => {
       let nameSensores = ['Luz da sala', 'Luz da piscina', 'Alarme'];
       let newSensores = [];
@@ -61,37 +71,63 @@ export default function App() {
       
         const htmlStringSensor = await urlSensorResponse.text(); // get response text
         const $ = cheerio.load(htmlStringSensor);       // parse HTML string
-      
-  
+        
         const result = $("#s-results-list-atf > body")["_root"]["0"]["children"][0]["data"]
 
         let sit = parseInt(result);
 
         console.log("result, sit: ", result, sit);
 
-        
-
         let sensor = {
           "id": i,
           "name": nameSensores[i-1],
           "sit": sit
-        }
+        };
 
         newSensores.push(sensor);
       }
 
-      setSensores(newSensores)
+      let d = new Date();
 
+      let dateNow = {
+        'day': d.getDay(),
+        'date': d.getDate(),
+        'month': d.getMonth(),
+        'hours': d.getHours(),
+      }; 
 
+      setSensores(newSensores);
+      setActualDate(dateNow);
+      getActualTemp();
 
       console.log(newSensores, typeof(result))
-    }
-    
+    };    
     setSensorsSit();
   }, [])
 
+  const getActualTemp = async () => {
+    await axios.get('http://api.openweathermap.org/data/2.5/weather?q=Maceio&appid=deca66798931949be04d0f562c109e49').then((response) => {
+      console.log(response.data.main.temp)
+      temp = parseInt(response.data.main.temp - 273);
+
+      setActualTemp(actualTemp);
+    });
+  };  
+
   useEffect(() => {
-    console.log(sensores)
+    console.log(sensores);
+    
+    let d = new Date();
+
+    let dateNow = {
+      'day': d.getDay(),
+      'date': d.getDate(),
+      'month': d.getMonth(),
+      'hours': d.getHours(),
+    };
+
+    setActualDate(dateNow);
+    getActualTemp();
   }, [sensores])
 
   const controlAll = async (action) => {
@@ -204,15 +240,17 @@ export default function App() {
                 <Text style={styles.title}>Smart Home</Text>
             
                 <View style={styles.infoContainer}>
-                  <Ionicons name="partly-sunny" size={28} color="white" />
+                  <Ionicons name={actualDate.hours >= 5 && actualDate.hours <= 17 ? "partly-sunny" : "cloudy-night"} size={28} color="white" />
 
+                
                   <Text style={styles.temperature}>
-                    29 °<Text style={{fontSize: 14, fontFamily: "Lato_400Regular"}}>C</Text>
+                    {actualTemp}° <Text style={{fontSize: 14, fontFamily: "Lato_400Regular"}}>C</Text>
                   </Text>
-
-                  <Text style={styles.date}>Domingo, 21 de março</Text>
+                  
+                
+                  <Text style={styles.date}>{days[actualDate.day]}, {actualDate.date} de {months[actualDate.month+1]}</Text>
                 </View>
-
+                
                 <TouchableOpacity style={styles.shutdownAllContainer} onPress={() => handleSuperButtonPress()}>
                   <View style={styles.shutdownAll}>
                     <Ionicons name="power-outline" size={34} color="#e62727" />
@@ -237,7 +275,7 @@ export default function App() {
                 return (
                   <View style={styles.sensorCard}>
                     <View style={styles.sensorCardIconsContainer}>
-                      <Ionicons name={item.sit == 0 ? "bulb-outline" : "bulb" } size={24} color={item.sit == 0 ? colors["icon"].disabled : colors["icon"].enabled} />
+                      <Ionicons name={item.id == 3 && item.sit == 1 ? "volume-high" : item.id == 3 && item.sit == 0 ? "volume-high-outline" : item.sit == 0 ? "bulb-outline" : "bulb"} size={24} color={item.sit == 0 ? colors["icon"].disabled : colors["icon"].enabled} />
 
                       <TouchableOpacity 
                       style={[
@@ -249,7 +287,7 @@ export default function App() {
                           }
                         ]} 
                         onPress={() => handleSwitchPress(item.id)}>                        
-                        <Ionicons name="power-outline" size={18} color={ item.sit == 0 ? colors["switchIcon"].disabled : colors["switchIcon"].enabled } />
+                        <Ionicons name={"power-outline"} size={18} color={ item.sit == 0 ? colors["switchIcon"].disabled : colors["switchIcon"].enabled } />
                       </TouchableOpacity>
                     </View>
 
@@ -259,7 +297,7 @@ export default function App() {
                       </Text>          
 
                       <Text style={[styles.sensorStatus, {color: item.sit == 0 ? colors['statusDesc'].disabled : colors['statusDesc'].enabled }]}>
-                        {item.sit == 0 ? "Off" : "On"}
+                        {item.sit == 0 ? "Desligado" : "Ligado"}
                       </Text>
                     </View>
                   </View>  
